@@ -15,6 +15,9 @@ export function ComplianceStatsComponent({ stats }: ComplianceStatsProps) {
 
   const isCompliant = stats.complianceRate >= 95; // Consider 95%+ as compliant
 
+  const totalHours = stats.totalReadings / 60;
+  const compliantHours = stats.compliantReadings / 60;
+
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
@@ -33,8 +36,7 @@ export function ComplianceStatsComponent({ stats }: ComplianceStatsProps) {
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            {formatNumber(stats.compliantReadings)} of {formatNumber(stats.totalReadings)}{' '}
-            readings
+            {formatNumber(compliantHours, 1)} of {formatNumber(totalHours, 1)} hours
           </p>
         </CardContent>
       </Card>
@@ -47,10 +49,10 @@ export function ComplianceStatsComponent({ stats }: ComplianceStatsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold text-red-600">
-            {formatNumber(stats.violationReadings)}
+            {formatNumber(stats.totalViolationHours, 1)}
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            {formatNumber(stats.totalViolationHours, 1)} hours of non-compliance
+            hours of non-compliance
           </p>
         </CardContent>
       </Card>
@@ -64,10 +66,10 @@ export function ComplianceStatsComponent({ stats }: ComplianceStatsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold text-orange-600">
-            {formatNumber(stats.dayTimeViolations)}
+            {formatNumber(stats.dayTimeViolations / 60, 1)}
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            {formatNumber(stats.dayTimeViolations / 60, 1)} hours
+            hours of non-compliance
           </p>
         </CardContent>
       </Card>
@@ -81,10 +83,10 @@ export function ComplianceStatsComponent({ stats }: ComplianceStatsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold text-orange-600">
-            {formatNumber(stats.nightTimeViolations)}
+            {formatNumber(stats.nightTimeViolations / 60, 1)}
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            {formatNumber(stats.nightTimeViolations / 60, 1)} hours
+            hours of non-compliance
           </p>
         </CardContent>
       </Card>
