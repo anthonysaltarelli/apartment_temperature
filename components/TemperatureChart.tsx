@@ -87,6 +87,30 @@ export function TemperatureChart({ data, interval, tempDisplay }: TemperatureCha
     return zones;
   }, [chartData]);
 
+  // Calculate Y-axis domain based on displayed temperature data
+  const yAxisDomain = useMemo(() => {
+    let minTemp = Infinity;
+    let maxTemp = -Infinity;
+
+    chartData.forEach((point) => {
+      if (tempDisplay === 'indoor' || tempDisplay === 'both') {
+        minTemp = Math.min(minTemp, point.minTemp);
+        maxTemp = Math.max(maxTemp, point.maxTemp);
+      }
+      if ((tempDisplay === 'outdoor' || tempDisplay === 'both') && point.outdoorTemp !== undefined) {
+        minTemp = Math.min(minTemp, point.outdoorTemp);
+        maxTemp = Math.max(maxTemp, point.outdoorTemp);
+      }
+    });
+
+    // Add some padding (5 degrees) to the range
+    const padding = 5;
+    const domainMin = Math.floor(minTemp - padding);
+    const domainMax = Math.ceil(maxTemp + padding);
+
+    return [domainMin, domainMax];
+  }, [chartData, tempDisplay]);
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -160,7 +184,7 @@ export function TemperatureChart({ data, interval, tempDisplay }: TemperatureCha
         />
         <YAxis
           label={{ value: 'Temperature (°F)', angle: -90, position: 'insideLeft' }}
-          domain={[55, 'dataMax + 2']}
+          domain={yAxisDomain}
           tick={{ fontSize: 12 }}
         />
         <Tooltip content={<CustomTooltip />} />
