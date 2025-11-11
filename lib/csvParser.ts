@@ -79,7 +79,7 @@ export async function parseTemperatureCSV(csvText: string): Promise<TemperatureR
           reject(error);
         }
       },
-      error: (error) => {
+      error: (error: Error) => {
         console.error('CSV parse error:', error);
         reject(error);
       },

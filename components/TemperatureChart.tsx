@@ -53,31 +53,31 @@ export function TemperatureChart({ data, interval }: TemperatureChartProps) {
   // Identify violation zones for highlighting
   const violationZones = useMemo(() => {
     const zones: Array<{ start: number; end: number }> = [];
-    let currentZone: { start: number } | null = null;
+    let currentZoneStart: number | null = null;
 
     chartData.forEach((point, index) => {
       // Mark as violation if the interval is not compliant OR has any violations
       const hasViolations = !point.isCompliant || (point as any).violationCount > 0;
 
       if (hasViolations) {
-        if (!currentZone) {
-          currentZone = { start: point.timestamp };
+        if (currentZoneStart === null) {
+          currentZoneStart = point.timestamp;
         }
       } else {
-        if (currentZone) {
+        if (currentZoneStart !== null) {
           zones.push({
-            start: currentZone.start,
-            end: chartData[index - 1]?.timestamp || currentZone.start,
+            start: currentZoneStart,
+            end: chartData[index - 1]?.timestamp || currentZoneStart,
           });
-          currentZone = null;
+          currentZoneStart = null;
         }
       }
     });
 
     // Close last zone if still open
-    if (currentZone && chartData.length > 0) {
+    if (currentZoneStart !== null && chartData.length > 0) {
       zones.push({
-        start: currentZone.start,
+        start: currentZoneStart,
         end: chartData[chartData.length - 1].timestamp,
       });
     }
