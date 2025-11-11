@@ -6,7 +6,7 @@ import { TemperatureReading, TimeInterval, ComplianceStats } from '@/lib/types';
 import { loadTemperatureData } from '@/lib/csvParser';
 import { calculateComplianceStats, checkCompliance } from '@/lib/complianceChecker';
 import { aggregateReadings, identifyViolationPeriods, ViolationPeriod } from '@/lib/dataAggregator';
-import { fetchOutdoorTemperature, getOutdoorTempForTimestamp, NYC_LATITUDE, NYC_LONGITUDE } from '@/lib/weatherApi';
+import { fetchOutdoorTemperature, getOutdoorTempForTimestamp } from '@/lib/weatherApi';
 import { TemperatureChart } from '@/components/TemperatureChart';
 import { ComplianceStatsComponent } from '@/components/ComplianceStats';
 import { ViolationPeriods } from '@/components/ViolationPeriods';
@@ -176,9 +176,6 @@ export default function Home() {
               <h1 className="text-4xl font-bold tracking-tight">Apartment Temperature Compliance</h1>
               <p className="text-muted-foreground mt-1">
                 NYC Heating Law: 68°F (6am-10pm, if outdoor &lt; 55°F) | 62°F (10pm-6am)
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Outdoor Weather: {NYC_LATITUDE.toFixed(6)}°N, {Math.abs(NYC_LONGITUDE).toFixed(6)}°W
               </p>
               {outdoorDataLoading && (
                 <p className="text-sm text-muted-foreground mt-1">
