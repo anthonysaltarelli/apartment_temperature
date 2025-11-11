@@ -11,7 +11,7 @@ export function checkCompliance(
 ): { isCompliant: boolean; requiredTemp: number } {
   const hour = timestamp.getHours();
 
-  // Day time: 6am (6) to 10pm (22)
+  // Day time: 6am to 10pm (not including 10pm)
   if (hour >= 6 && hour < 22) {
     return {
       isCompliant: temperature >= 68.0,

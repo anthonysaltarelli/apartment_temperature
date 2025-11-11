@@ -29,9 +29,9 @@ export function TemperatureChart({ data, interval }: TemperatureChartProps) {
     switch (interval) {
       case '1min':
       case '5min':
-        return format(date, 'MM/dd HH:mm');
+        return format(date, 'MM/dd h:mm a');
       case '30min':
-        return format(date, 'MM/dd HH:mm');
+        return format(date, 'MM/dd h:mm a');
       case '1hour':
         return format(date, 'MM/dd ha');
     }
@@ -46,6 +46,7 @@ export function TemperatureChart({ data, interval }: TemperatureChartProps) {
       minTemp: parseFloat(reading.minTemperature.toFixed(1)),
       maxTemp: parseFloat(reading.maxTemperature.toFixed(1)),
       isCompliant: reading.isCompliant,
+      violationCount: reading.violationCount,
     }));
   }, [data, interval]);
 
@@ -55,7 +56,10 @@ export function TemperatureChart({ data, interval }: TemperatureChartProps) {
     let currentZone: { start: number } | null = null;
 
     chartData.forEach((point, index) => {
-      if (!point.isCompliant) {
+      // Mark as violation if the interval is not compliant OR has any violations
+      const hasViolations = !point.isCompliant || (point as any).violationCount > 0;
+
+      if (hasViolations) {
         if (!currentZone) {
           currentZone = { start: point.timestamp };
         }

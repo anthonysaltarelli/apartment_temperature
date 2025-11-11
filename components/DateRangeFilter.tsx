@@ -35,6 +35,7 @@ export function DateRangeFilter({
 
   const presets = [
     { label: 'All Data', days: null },
+    { label: 'Last 1 Day', days: 1 },
     { label: 'Last 7 Days', days: 7 },
     { label: 'Last 14 Days', days: 14 },
     { label: 'Last 30 Days', days: 30 },

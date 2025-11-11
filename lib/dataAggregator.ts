@@ -89,6 +89,7 @@ export interface ViolationPeriod {
   end: Date;
   duration: number; // in minutes
   minTemp: number;
+  maxTemp: number;
   avgTemp: number;
   type: 'daytime' | 'nighttime';
 }
@@ -121,6 +122,7 @@ export function identifyViolationPeriods(
             end: currentPeriod.readings[currentPeriod.readings.length - 1].timestamp,
             duration: currentPeriod.readings.length,
             minTemp: Math.min(...temps),
+            maxTemp: Math.max(...temps),
             avgTemp: temps.reduce((a, b) => a + b, 0) / temps.length,
             type: currentPeriod.type,
           });
@@ -140,6 +142,7 @@ export function identifyViolationPeriods(
           end: currentPeriod.readings[currentPeriod.readings.length - 1].timestamp,
           duration: currentPeriod.readings.length,
           minTemp: Math.min(...temps),
+          maxTemp: Math.max(...temps),
           avgTemp: temps.reduce((a, b) => a + b, 0) / temps.length,
           type: currentPeriod.type,
         });
@@ -156,6 +159,7 @@ export function identifyViolationPeriods(
       end: currentPeriod.readings[currentPeriod.readings.length - 1].timestamp,
       duration: currentPeriod.readings.length,
       minTemp: Math.min(...temps),
+      maxTemp: Math.max(...temps),
       avgTemp: temps.reduce((a, b) => a + b, 0) / temps.length,
       type: currentPeriod.type,
     });
