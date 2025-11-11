@@ -21,9 +21,10 @@ import { AggregatedReading, TimeInterval } from '@/lib/types';
 interface TemperatureChartProps {
   data: AggregatedReading[];
   interval: TimeInterval;
+  tempDisplay: 'indoor' | 'outdoor' | 'both';
 }
 
-export function TemperatureChart({ data, interval }: TemperatureChartProps) {
+export function TemperatureChart({ data, interval, tempDisplay }: TemperatureChartProps) {
   // Define format function first
   const formatTimestamp = (date: Date, interval: TimeInterval): string => {
     switch (interval) {
@@ -198,28 +199,32 @@ export function TemperatureChart({ data, interval }: TemperatureChartProps) {
         />
 
         {/* Indoor temperature line */}
-        <Line
-          type="monotone"
-          dataKey="temperature"
-          stroke="#2563eb"
-          strokeWidth={2}
-          dot={false}
-          name="Indoor Temp"
-          isAnimationActive={false}
-        />
+        {(tempDisplay === 'indoor' || tempDisplay === 'both') && (
+          <Line
+            type="monotone"
+            dataKey="temperature"
+            stroke="#2563eb"
+            strokeWidth={2}
+            dot={false}
+            name="Indoor Temp"
+            isAnimationActive={false}
+          />
+        )}
 
         {/* Outdoor temperature line */}
-        <Line
-          type="monotone"
-          dataKey="outdoorTemp"
-          stroke="#0891b2"
-          strokeWidth={2}
-          strokeDasharray="5 5"
-          dot={false}
-          name="Outdoor Temp"
-          isAnimationActive={false}
-          connectNulls={true}
-        />
+        {(tempDisplay === 'outdoor' || tempDisplay === 'both') && (
+          <Line
+            type="monotone"
+            dataKey="outdoorTemp"
+            stroke="#0891b2"
+            strokeWidth={2}
+            strokeDasharray="5 5"
+            dot={false}
+            name="Outdoor Temp"
+            isAnimationActive={false}
+            connectNulls={true}
+          />
+        )}
 
         {/* Min/Max range for aggregated intervals */}
         {interval !== '1min' && (

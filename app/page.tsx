@@ -22,6 +22,7 @@ export default function Home() {
   const [interval, setInterval] = useState<TimeInterval>('30min');
   const [dateRange, setDateRange] = useState<DateRange | null>(null);
   const [outdoorDataLoading, setOutdoorDataLoading] = useState(false);
+  const [tempDisplay, setTempDisplay] = useState<'indoor' | 'outdoor' | 'both'>('both');
 
   useEffect(() => {
     async function loadData() {
@@ -216,25 +217,34 @@ export default function Home() {
         {/* Chart with Interval Controls */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <CardTitle>Temperature History</CardTitle>
                 <CardDescription>
                   Red highlighted areas indicate non-compliant periods
                 </CardDescription>
               </div>
-              <Tabs value={interval} onValueChange={(v) => setInterval(v as TimeInterval)}>
-                <TabsList>
-                  <TabsTrigger value="5min">5 min</TabsTrigger>
-                  <TabsTrigger value="30min">30 min</TabsTrigger>
-                  <TabsTrigger value="1hour">1 hour</TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <div className="flex items-center gap-4">
+                <Tabs value={tempDisplay} onValueChange={(v) => setTempDisplay(v as 'indoor' | 'outdoor' | 'both')}>
+                  <TabsList>
+                    <TabsTrigger value="indoor">Indoor</TabsTrigger>
+                    <TabsTrigger value="outdoor">Outdoor</TabsTrigger>
+                    <TabsTrigger value="both">Both</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                <Tabs value={interval} onValueChange={(v) => setInterval(v as TimeInterval)}>
+                  <TabsList>
+                    <TabsTrigger value="5min">5 min</TabsTrigger>
+                    <TabsTrigger value="30min">30 min</TabsTrigger>
+                    <TabsTrigger value="1hour">1 hour</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="h-[500px]">
-              <TemperatureChart data={aggregatedData} interval={interval} />
+              <TemperatureChart data={aggregatedData} interval={interval} tempDisplay={tempDisplay} />
             </div>
           </CardContent>
         </Card>
