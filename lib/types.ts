@@ -4,6 +4,7 @@ export interface TemperatureReading {
   humidity: number;
   isCompliant: boolean;
   requiredTemp: number; // 68 or 62 based on time
+  outdoorTemp?: number; // Outdoor temperature in Fahrenheit (optional)
 }
 
 export interface AggregatedReading {
@@ -15,6 +16,7 @@ export interface AggregatedReading {
   isCompliant: boolean;
   violationCount: number;
   totalReadings: number;
+  avgOutdoorTemp?: number; // Average outdoor temperature (optional)
 }
 
 export interface ComplianceStats {

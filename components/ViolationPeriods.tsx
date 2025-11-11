@@ -138,24 +138,46 @@ export function ViolationPeriods({ periods }: ViolationPeriodsProps) {
                         {/* Temperature Stats Grid */}
                         <div className="grid grid-cols-3 gap-3 pt-3 border-t">
                           <div className="text-center">
-                            <div className="text-xs text-muted-foreground mb-1">Min Temp</div>
+                            <div className="text-xs text-muted-foreground mb-1">Min Indoor</div>
                             <div className="text-lg font-bold text-red-600">
                               {period.minTemp.toFixed(1)}°F
                             </div>
                           </div>
                           <div className="text-center border-x">
-                            <div className="text-xs text-muted-foreground mb-1">Avg Temp</div>
+                            <div className="text-xs text-muted-foreground mb-1">Avg Indoor</div>
                             <div className="text-lg font-bold text-orange-600">
                               {period.avgTemp.toFixed(1)}°F
                             </div>
                           </div>
                           <div className="text-center">
-                            <div className="text-xs text-muted-foreground mb-1">Max Temp</div>
+                            <div className="text-xs text-muted-foreground mb-1">Max Indoor</div>
                             <div className="text-lg font-bold text-orange-500">
                               {period.maxTemp?.toFixed(1) || 'N/A'}°F
                             </div>
                           </div>
                         </div>
+
+                        {/* Outdoor Temperature */}
+                        {period.avgOutdoorTemp !== undefined && (
+                          <div className="mt-3 pt-3 border-t">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">Avg Outdoor Temp:</span>
+                              <span className="text-base font-semibold text-blue-600">
+                                {period.avgOutdoorTemp.toFixed(1)}°F
+                              </span>
+                            </div>
+                            {period.type === 'daytime' && period.avgOutdoorTemp < 55 && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                ⚠️ Outdoor temp below 55°F - heating requirement applies
+                              </p>
+                            )}
+                            {period.type === 'daytime' && period.avgOutdoorTemp >= 55 && (
+                              <p className="text-xs text-green-600 mt-1">
+                                ✓ Outdoor temp above 55°F - violation may not apply per NYC law
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}

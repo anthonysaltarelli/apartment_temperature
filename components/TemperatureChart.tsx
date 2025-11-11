@@ -45,6 +45,7 @@ export function TemperatureChart({ data, interval }: TemperatureChartProps) {
       temperature: parseFloat(reading.avgTemperature.toFixed(1)),
       minTemp: parseFloat(reading.minTemperature.toFixed(1)),
       maxTemp: parseFloat(reading.maxTemperature.toFixed(1)),
+      outdoorTemp: reading.avgOutdoorTemp !== undefined ? parseFloat(reading.avgOutdoorTemp.toFixed(1)) : undefined,
       isCompliant: reading.isCompliant,
       violationCount: reading.violationCount,
     }));
@@ -95,7 +96,7 @@ export function TemperatureChart({ data, interval }: TemperatureChartProps) {
           <p className="font-medium text-sm mb-1">{data.displayTime}</p>
           <div className="space-y-1 text-sm">
             <p className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Avg Temp:</span>
+              <span className="text-muted-foreground">Indoor Temp:</span>
               <span
                 className={`font-medium ${
                   isViolation ? 'text-red-600' : 'text-green-600'
@@ -104,6 +105,12 @@ export function TemperatureChart({ data, interval }: TemperatureChartProps) {
                 {data.temperature}°F
               </span>
             </p>
+            {data.outdoorTemp !== undefined && (
+              <p className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Outdoor Temp:</span>
+                <span className="text-blue-600 font-medium">{data.outdoorTemp}°F</span>
+              </p>
+            )}
             {interval !== '1min' && (
               <>
                 <p className="flex justify-between gap-4">
@@ -183,16 +190,35 @@ export function TemperatureChart({ data, interval }: TemperatureChartProps) {
           strokeDasharray="5 5"
           label={{ value: '62°F (Night)', position: 'right', fontSize: 11 }}
         />
+        <ReferenceLine
+          y={55}
+          stroke="#0891b2"
+          strokeDasharray="3 3"
+          label={{ value: '55°F (Outdoor Threshold)', position: 'right', fontSize: 11 }}
+        />
 
-        {/* Temperature line with gradient for violations */}
+        {/* Indoor temperature line */}
         <Line
           type="monotone"
           dataKey="temperature"
           stroke="#2563eb"
           strokeWidth={2}
           dot={false}
-          name="Temperature"
+          name="Indoor Temp"
           isAnimationActive={false}
+        />
+
+        {/* Outdoor temperature line */}
+        <Line
+          type="monotone"
+          dataKey="outdoorTemp"
+          stroke="#0891b2"
+          strokeWidth={2}
+          strokeDasharray="5 5"
+          dot={false}
+          name="Outdoor Temp"
+          isAnimationActive={false}
+          connectNulls={true}
         />
 
         {/* Min/Max range for aggregated intervals */}
@@ -205,7 +231,7 @@ export function TemperatureChart({ data, interval }: TemperatureChartProps) {
               strokeWidth={1}
               strokeDasharray="3 3"
               dot={false}
-              name="Min Temp"
+              name="Min Indoor"
               isAnimationActive={false}
             />
             <Line
@@ -215,7 +241,7 @@ export function TemperatureChart({ data, interval }: TemperatureChartProps) {
               strokeWidth={1}
               strokeDasharray="3 3"
               dot={false}
-              name="Max Temp"
+              name="Max Indoor"
               isAnimationActive={false}
             />
           </>

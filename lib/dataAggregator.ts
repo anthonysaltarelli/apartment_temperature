@@ -34,6 +34,7 @@ export function aggregateReadings(
       isCompliant: reading.isCompliant,
       violationCount: reading.isCompliant ? 0 : 1,
       totalReadings: 1,
+      avgOutdoorTemp: reading.outdoorTemp,
     }));
   }
 
@@ -55,12 +56,16 @@ export function aggregateReadings(
   buckets.forEach((bucketReadings, bucketTime) => {
     const temps = bucketReadings.map((r) => r.temperature);
     const humidities = bucketReadings.map((r) => r.humidity);
+    const outdoorTemps = bucketReadings.map((r) => r.outdoorTemp).filter((t): t is number => t !== undefined);
     const violationCount = bucketReadings.filter((r) => !r.isCompliant).length;
 
     const avgTemperature = temps.reduce((a, b) => a + b, 0) / temps.length;
     const minTemperature = Math.min(...temps);
     const maxTemperature = Math.max(...temps);
     const avgHumidity = humidities.reduce((a, b) => a + b, 0) / humidities.length;
+    const avgOutdoorTemp = outdoorTemps.length > 0
+      ? outdoorTemps.reduce((a, b) => a + b, 0) / outdoorTemps.length
+      : undefined;
 
     // Consider the interval compliant only if all readings are compliant
     const isCompliant = violationCount === 0;
@@ -74,6 +79,7 @@ export function aggregateReadings(
       isCompliant,
       violationCount,
       totalReadings: bucketReadings.length,
+      avgOutdoorTemp,
     });
   });
 
@@ -91,6 +97,7 @@ export interface ViolationPeriod {
   minTemp: number;
   maxTemp: number;
   avgTemp: number;
+  avgOutdoorTemp?: number; // Average outdoor temperature during violation
   type: 'daytime' | 'nighttime';
 }
 
@@ -138,6 +145,14 @@ function finalizePeriod(period: {
   type: 'daytime' | 'nighttime';
 }): ViolationPeriod {
   const temps = period.readings.map((r) => r.temperature);
+  const outdoorTemps = period.readings
+    .map((r) => r.outdoorTemp)
+    .filter((t): t is number => t !== undefined);
+
+  const avgOutdoorTemp = outdoorTemps.length > 0
+    ? outdoorTemps.reduce((a, b) => a + b, 0) / outdoorTemps.length
+    : undefined;
+
   return {
     start: period.start,
     end: period.readings[period.readings.length - 1].timestamp,
@@ -145,6 +160,7 @@ function finalizePeriod(period: {
     minTemp: Math.min(...temps),
     maxTemp: Math.max(...temps),
     avgTemp: temps.reduce((a, b) => a + b, 0) / temps.length,
+    avgOutdoorTemp,
     type: period.type,
   };
 }
@@ -214,6 +230,13 @@ function mergeCloseViolationPeriods(
 
     // Merge if same type and gap is within tolerance
     if (current.type === next.type && gapMinutes <= gapToleranceMinutes) {
+      // Merge outdoor temps if both exist
+      const mergedOutdoorTemp =
+        current.avgOutdoorTemp !== undefined && next.avgOutdoorTemp !== undefined
+          ? (current.avgOutdoorTemp * current.duration + next.avgOutdoorTemp * next.duration) /
+            (current.duration + next.duration)
+          : current.avgOutdoorTemp ?? next.avgOutdoorTemp;
+
       // Merge the periods
       current = {
         start: current.start,
@@ -223,6 +246,7 @@ function mergeCloseViolationPeriods(
         maxTemp: Math.max(current.maxTemp, next.maxTemp),
         avgTemp: (current.avgTemp * current.duration + next.avgTemp * next.duration) /
                  (current.duration + next.duration),
+        avgOutdoorTemp: mergedOutdoorTemp,
         type: current.type,
       };
     } else {

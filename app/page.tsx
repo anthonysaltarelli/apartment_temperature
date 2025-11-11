@@ -4,8 +4,9 @@ import { useEffect, useState, useMemo } from 'react';
 import { startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { TemperatureReading, TimeInterval, ComplianceStats } from '@/lib/types';
 import { loadTemperatureData } from '@/lib/csvParser';
-import { calculateComplianceStats } from '@/lib/complianceChecker';
+import { calculateComplianceStats, checkCompliance } from '@/lib/complianceChecker';
 import { aggregateReadings, identifyViolationPeriods, ViolationPeriod } from '@/lib/dataAggregator';
+import { fetchOutdoorTemperature, getOutdoorTempForTimestamp, NYC_LATITUDE, NYC_LONGITUDE } from '@/lib/weatherApi';
 import { TemperatureChart } from '@/components/TemperatureChart';
 import { ComplianceStatsComponent } from '@/components/ComplianceStats';
 import { ViolationPeriods } from '@/components/ViolationPeriods';
@@ -20,25 +21,72 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [interval, setInterval] = useState<TimeInterval>('30min');
   const [dateRange, setDateRange] = useState<DateRange | null>(null);
+  const [outdoorDataLoading, setOutdoorDataLoading] = useState(false);
 
   useEffect(() => {
-    loadTemperatureData()
-      .then((data) => {
-        setAllReadings(data);
-        // Set initial date range to all available data
-        if (data.length > 0) {
-          setDateRange({
-            from: startOfDay(data[0].timestamp),
-            to: endOfDay(data[data.length - 1].timestamp),
-          });
+    async function loadData() {
+      try {
+        // Load indoor temperature data
+        const indoorData = await loadTemperatureData();
+
+        if (indoorData.length === 0) {
+          setError('No temperature data available');
+          setLoading(false);
+          return;
         }
+
+        // Set initial date range
+        const startDate = startOfDay(indoorData[0].timestamp);
+        const endDate = endOfDay(indoorData[indoorData.length - 1].timestamp);
+
+        setDateRange({
+          from: startDate,
+          to: endDate,
+        });
+
+        // Fetch outdoor temperature data
+        setOutdoorDataLoading(true);
+        try {
+          const outdoorData = await fetchOutdoorTemperature(startDate, endDate);
+
+          // Merge outdoor temperature into indoor readings
+          const enrichedData = indoorData.map((reading) => {
+            const outdoorTemp = getOutdoorTempForTimestamp(reading.timestamp, outdoorData);
+
+            // Recalculate compliance with outdoor temperature
+            const { isCompliant, requiredTemp } = checkCompliance(
+              reading.timestamp,
+              reading.temperature,
+              outdoorTemp ?? undefined
+            );
+
+            return {
+              ...reading,
+              outdoorTemp: outdoorTemp ?? undefined,
+              isCompliant,
+              requiredTemp,
+            };
+          });
+
+          setAllReadings(enrichedData);
+          console.log('Outdoor temperature data loaded successfully');
+        } catch (outdoorError) {
+          console.warn('Failed to load outdoor temperature data:', outdoorError);
+          // Continue with indoor data only
+          setAllReadings(indoorData);
+        } finally {
+          setOutdoorDataLoading(false);
+        }
+
         setLoading(false);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error('Error loading data:', err);
         setError('Failed to load temperature data');
         setLoading(false);
-      });
+      }
+    }
+
+    loadData();
   }, []);
 
   // Filter readings based on selected date range
@@ -127,8 +175,16 @@ export default function Home() {
             <div>
               <h1 className="text-4xl font-bold tracking-tight">Apartment Temperature Compliance</h1>
               <p className="text-muted-foreground mt-1">
-                NYC Heating Law: 68°F (6am-10pm) | 62°F (10pm-6am)
+                NYC Heating Law: 68°F (6am-10pm, if outdoor &lt; 55°F) | 62°F (10pm-6am)
               </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Outdoor Weather: {NYC_LATITUDE.toFixed(6)}°N, {Math.abs(NYC_LONGITUDE).toFixed(6)}°W
+              </p>
+              {outdoorDataLoading && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Loading outdoor temperature data...
+                </p>
+              )}
             </div>
             {displayDateRange && (
               <Badge variant="outline" className="text-sm">
