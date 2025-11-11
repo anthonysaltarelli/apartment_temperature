@@ -31,11 +31,13 @@ export function DateRangeFilter({
   availableRange,
   onDateRangeChange,
 }: DateRangeFilterProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [isFromOpen, setIsFromOpen] = React.useState(false);
+  const [isToOpen, setIsToOpen] = React.useState(false);
 
   const presets = [
     { label: 'All Data', days: null },
     { label: 'Last 1 Day', days: 1 },
+    { label: 'Last 3 Days', days: 3 },
     { label: 'Last 7 Days', days: 7 },
     { label: 'Last 14 Days', days: 14 },
     { label: 'Last 30 Days', days: 30 },
@@ -56,27 +58,32 @@ export function DateRangeFilter({
         to: end,
       });
     }
-    setIsOpen(false);
   };
 
-  const handleCalendarSelect = (range: { from?: Date; to?: Date } | undefined) => {
-    if (range?.from && range?.to) {
+  const handleFromDateSelect = (date: Date | undefined) => {
+    if (date) {
+      const newFrom = startOfDay(date);
+      // Ensure 'to' is not before 'from'
+      const newTo = dateRange.to < newFrom ? endOfDay(date) : dateRange.to;
       onDateRangeChange({
-        from: startOfDay(range.from),
-        to: endOfDay(range.to),
+        from: newFrom,
+        to: newTo,
       });
-      setIsOpen(false);
+      setIsFromOpen(false);
     }
   };
 
-  const formatDateRange = () => {
-    if (!dateRange.from || !dateRange.to) return 'Select date range';
-
-    const from = format(dateRange.from, 'MMM dd, yyyy');
-    const to = format(dateRange.to, 'MMM dd, yyyy');
-
-    if (from === to) return from;
-    return `${from} - ${to}`;
+  const handleToDateSelect = (date: Date | undefined) => {
+    if (date) {
+      const newTo = endOfDay(date);
+      // Ensure 'from' is not after 'to'
+      const newFrom = dateRange.from > newTo ? startOfDay(date) : dateRange.from;
+      onDateRangeChange({
+        from: newFrom,
+        to: newTo,
+      });
+      setIsToOpen(false);
+    }
   };
 
   return (
@@ -97,32 +104,67 @@ export function DateRangeFilter({
         </SelectContent>
       </Select>
 
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              'justify-start text-left font-normal min-w-[280px]',
-              !dateRange && 'text-muted-foreground'
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {formatDateRange()}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="range"
-            defaultMonth={dateRange.from}
-            selected={{ from: dateRange.from, to: dateRange.to }}
-            onSelect={handleCalendarSelect}
-            numberOfMonths={2}
-            disabled={(date) =>
-              date < startOfDay(availableRange.start) || date > endOfDay(availableRange.end)
-            }
-          />
-        </PopoverContent>
-      </Popover>
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">From:</span>
+        <Popover open={isFromOpen} onOpenChange={setIsFromOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                'justify-start text-left font-normal w-[160px]',
+                !dateRange && 'text-muted-foreground'
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateRange.from ? format(dateRange.from, 'MMM dd, yyyy') : 'Select date'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateRange.from}
+              onSelect={handleFromDateSelect}
+              defaultMonth={dateRange.from}
+              disabled={(date) =>
+                date < startOfDay(availableRange.start) ||
+                date > endOfDay(availableRange.end) ||
+                date > dateRange.to
+              }
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">To:</span>
+        <Popover open={isToOpen} onOpenChange={setIsToOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                'justify-start text-left font-normal w-[160px]',
+                !dateRange && 'text-muted-foreground'
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateRange.to ? format(dateRange.to, 'MMM dd, yyyy') : 'Select date'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateRange.to}
+              onSelect={handleToDateSelect}
+              defaultMonth={dateRange.to}
+              disabled={(date) =>
+                date < startOfDay(availableRange.start) ||
+                date > endOfDay(availableRange.end) ||
+                date < dateRange.from
+              }
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
     </div>
   );
 }
