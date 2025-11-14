@@ -273,11 +273,11 @@ export function TemperatureChart({ data, interval, tempDisplay, radiatorData }: 
             y1={yAxisDomain[0]}
             y2={yAxisDomain[0] + (yAxisDomain[1] - yAxisDomain[0]) * 0.05}
             fill={
-              zone.status === 'on' ? '#ef4444' :
-              zone.status === 'cooling' ? '#f97316' :
-              '#3b82f6'
+              zone.status === 'on' ? '#dc2626' :      // Bright red for On/Heating
+              zone.status === 'cooling' ? '#f59e0b' : // Amber/yellow-orange for Cooling
+              '#3b82f6'                               // Blue for Off
             }
-            fillOpacity={0.5}
+            fillOpacity={0.6}
             strokeOpacity={0}
           />
         ))}

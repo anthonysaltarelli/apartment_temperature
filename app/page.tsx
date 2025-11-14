@@ -252,7 +252,7 @@ export default function Home() {
                 <CardDescription>
                   Red highlighted areas indicate non-compliant periods
                   {aggregatedRadiatorData.length > 0 && (
-                    <> | Color bar at bottom shows radiator status (Red: On, Orange: Cooling, Blue: Off)</>
+                    <> | Color bar at bottom shows radiator status (Bright Red: On, Amber: Cooling, Blue: Off)</>
                   )}
                 </CardDescription>
               </div>
@@ -292,7 +292,7 @@ export default function Home() {
             <CardHeader>
               <CardTitle>Radiator Temperature History</CardTitle>
               <CardDescription>
-                Color-coded zones: Red (On/Heating), Orange (Cooling Down), Blue (Off)
+                Color-coded zones: Bright Red (On/Heating), Amber (Cooling Down), Blue (Off)
               </CardDescription>
             </CardHeader>
             <CardContent>

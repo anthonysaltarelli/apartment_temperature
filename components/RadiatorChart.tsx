@@ -146,11 +146,11 @@ export function RadiatorChart({ data, interval }: RadiatorChartProps) {
             x1={zone.start}
             x2={zone.end}
             fill={
-              zone.status === 'on' ? '#ef4444' :
-              zone.status === 'cooling' ? '#f97316' :
-              '#3b82f6'
+              zone.status === 'on' ? '#dc2626' :      // Bright red for On/Heating
+              zone.status === 'cooling' ? '#f59e0b' : // Amber/yellow-orange for Cooling
+              '#3b82f6'                               // Blue for Off
             }
-            fillOpacity={0.15}
+            fillOpacity={0.2}
             strokeOpacity={0}
           />
         ))}
