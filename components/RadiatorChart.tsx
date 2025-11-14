@@ -36,7 +36,15 @@ export function RadiatorChart({ data, interval }: RadiatorChartProps) {
   };
 
   const chartData = useMemo(() => {
-    return data.map((reading) => ({
+    // OPTIMIZED: Limit chart data to reasonable number of points to prevent memory issues
+    const maxPoints = 5000;
+    const samplingRate = data.length > maxPoints ? Math.ceil(data.length / maxPoints) : 1;
+
+    const sampledData = samplingRate > 1
+      ? data.filter((_, index) => index % samplingRate === 0)
+      : data;
+
+    return sampledData.map((reading) => ({
       timestamp: reading.timestamp.getTime(),
       displayTime: formatTimestamp(reading.timestamp, interval),
       temperature: parseFloat(reading.avgTemperature.toFixed(1)),
@@ -46,25 +54,36 @@ export function RadiatorChart({ data, interval }: RadiatorChartProps) {
     }));
   }, [data, interval]);
 
-  // Identify zones by status - create zones for EVERY data point
+  // Identify zones by status
+  // OPTIMIZED: Merge consecutive zones with same status to reduce render count
   const statusZones = useMemo(() => {
     if (chartData.length === 0) return [];
 
     const zones: Array<{ start: number; end: number; status: 'on' | 'cooling' | 'off' }> = [];
+    let currentZone: { start: number; end: number; status: 'on' | 'cooling' | 'off' } | null = null;
 
     chartData.forEach((point, index) => {
       const start = point.timestamp;
-      // End is the next point's timestamp, or extend slightly past the last point
       const end = index < chartData.length - 1
         ? chartData[index + 1].timestamp
-        : point.timestamp + (30 * 60 * 1000); // Extend 30 min past last point
+        : point.timestamp + (30 * 60 * 1000);
 
-      zones.push({
-        start,
-        end,
-        status: point.status,
-      });
+      if (currentZone && currentZone.status === point.status) {
+        // Extend current zone
+        currentZone.end = end;
+      } else {
+        // Save previous zone and start new one
+        if (currentZone) {
+          zones.push(currentZone);
+        }
+        currentZone = { start, end, status: point.status };
+      }
     });
+
+    // Add the last zone
+    if (currentZone) {
+      zones.push(currentZone);
+    }
 
     return zones;
   }, [chartData]);

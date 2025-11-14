@@ -13,7 +13,7 @@ import { ComplianceStatsComponent } from '@/components/ComplianceStats';
 import { ViolationPeriods } from '@/components/ViolationPeriods';
 import { DateRangeFilter, DateRange } from '@/components/DateRangeFilter';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
 export default function Home() {
@@ -257,20 +257,58 @@ export default function Home() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-4">
-                <Tabs value={tempDisplay} onValueChange={(v) => setTempDisplay(v as 'indoor' | 'outdoor' | 'both')}>
-                  <TabsList>
-                    <TabsTrigger value="indoor">Indoor</TabsTrigger>
-                    <TabsTrigger value="outdoor">Outdoor</TabsTrigger>
-                    <TabsTrigger value="both">Both</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-                <Tabs value={interval} onValueChange={(v) => setInterval(v as TimeInterval)}>
-                  <TabsList>
-                    <TabsTrigger value="5min">5 min</TabsTrigger>
-                    <TabsTrigger value="30min">30 min</TabsTrigger>
-                    <TabsTrigger value="1hour">1 hour</TabsTrigger>
-                  </TabsList>
-                </Tabs>
+                <div className="inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
+                  <Button
+                    variant={tempDisplay === 'indoor' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setTempDisplay('indoor')}
+                    className="h-7 px-3"
+                  >
+                    Indoor
+                  </Button>
+                  <Button
+                    variant={tempDisplay === 'outdoor' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setTempDisplay('outdoor')}
+                    className="h-7 px-3"
+                  >
+                    Outdoor
+                  </Button>
+                  <Button
+                    variant={tempDisplay === 'both' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setTempDisplay('both')}
+                    className="h-7 px-3"
+                  >
+                    Both
+                  </Button>
+                </div>
+                <div className="inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
+                  <Button
+                    variant={interval === '5min' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setInterval('5min')}
+                    className="h-7 px-3"
+                  >
+                    5 min
+                  </Button>
+                  <Button
+                    variant={interval === '30min' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setInterval('30min')}
+                    className="h-7 px-3"
+                  >
+                    30 min
+                  </Button>
+                  <Button
+                    variant={interval === '1hour' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setInterval('1hour')}
+                    className="h-7 px-3"
+                  >
+                    1 hour
+                  </Button>
+                </div>
               </div>
             </div>
           </CardHeader>

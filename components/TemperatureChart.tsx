@@ -41,6 +41,7 @@ export function TemperatureChart({ data, interval, tempDisplay, radiatorData }: 
   };
 
   // Prepare chart data with formatted timestamps and radiator status
+  // OPTIMIZED: Limit chart data to reasonable number of points to prevent memory issues
   const chartData = useMemo(() => {
     // Create a map of radiator status by timestamp for quick lookup
     const radiatorStatusMap = new Map<number, 'on' | 'cooling' | 'off'>();
@@ -50,11 +51,16 @@ export function TemperatureChart({ data, interval, tempDisplay, radiatorData }: 
       });
     }
 
-    return data.map((reading) => {
-      const radiatorStatus = radiatorStatusMap.get(reading.timestamp.getTime());
+    // Calculate sampling rate if dataset is too large
+    const maxPoints = 5000; // Limit to 5000 points for performance
+    const samplingRate = data.length > maxPoints ? Math.ceil(data.length / maxPoints) : 1;
 
-      // Map radiator status to Y-axis position (below the main chart)
-      const radiatorY = radiatorStatus === 'on' ? 3 : radiatorStatus === 'cooling' ? 2 : radiatorStatus === 'off' ? 1 : undefined;
+    const sampledData = samplingRate > 1
+      ? data.filter((_, index) => index % samplingRate === 0)
+      : data;
+
+    return sampledData.map((reading) => {
+      const radiatorStatus = radiatorStatusMap.get(reading.timestamp.getTime());
 
       return {
         timestamp: reading.timestamp.getTime(),
@@ -66,7 +72,6 @@ export function TemperatureChart({ data, interval, tempDisplay, radiatorData }: 
         isCompliant: reading.isCompliant,
         violationCount: reading.violationCount,
         radiatorStatus,
-        radiatorY,
       };
     });
   }, [data, interval, radiatorData]);
@@ -106,25 +111,36 @@ export function TemperatureChart({ data, interval, tempDisplay, radiatorData }: 
     return zones;
   }, [chartData]);
 
-  // Identify radiator status zones for highlighting - create zones for EVERY data point
+  // Identify radiator status zones for highlighting
+  // OPTIMIZED: Merge consecutive zones with same status to reduce render count
   const radiatorZones = useMemo(() => {
     if (!radiatorData || radiatorData.length === 0) return [];
 
     const zones: Array<{ start: number; end: number; status: 'on' | 'cooling' | 'off' }> = [];
+    let currentZone: { start: number; end: number; status: 'on' | 'cooling' | 'off' } | null = null;
 
     radiatorData.forEach((reading, index) => {
       const start = reading.timestamp.getTime();
-      // End is the next point's timestamp, or extend past the last point
       const end = index < radiatorData.length - 1
         ? radiatorData[index + 1].timestamp.getTime()
-        : start + (30 * 60 * 1000); // Extend 30 min past last point
+        : start + (30 * 60 * 1000);
 
-      zones.push({
-        start,
-        end,
-        status: reading.status,
-      });
+      if (currentZone && currentZone.status === reading.status) {
+        // Extend current zone
+        currentZone.end = end;
+      } else {
+        // Save previous zone and start new one
+        if (currentZone) {
+          zones.push(currentZone);
+        }
+        currentZone = { start, end, status: reading.status };
+      }
     });
+
+    // Add the last zone
+    if (currentZone) {
+      zones.push(currentZone);
+    }
 
     return zones;
   }, [radiatorData]);
