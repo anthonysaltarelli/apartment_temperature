@@ -1,4 +1,4 @@
-import { TemperatureReading, AggregatedReading, TimeInterval } from './types';
+import { TemperatureReading, AggregatedReading, TimeInterval, RadiatorReading, AggregatedRadiatorReading } from './types';
 
 function getIntervalMinutes(interval: TimeInterval): number {
   switch (interval) {
@@ -260,4 +260,87 @@ function mergeCloseViolationPeriods(
   merged.push(current);
 
   return merged;
+}
+
+// Aggregate radiator readings
+export function aggregateRadiatorReadings(
+  readings: RadiatorReading[],
+  interval: TimeInterval
+): AggregatedRadiatorReading[] {
+  if (interval === '1min') {
+    return readings.map((reading) => ({
+      timestamp: reading.timestamp,
+      avgTemperature: reading.temperature,
+      minTemperature: reading.temperature,
+      maxTemperature: reading.temperature,
+      avgHumidity: reading.humidity,
+      status: reading.status,
+      totalReadings: 1,
+    }));
+  }
+
+  const intervalMinutes = getIntervalMinutes(interval);
+  const buckets = new Map<number, RadiatorReading[]>();
+
+  readings.forEach((reading) => {
+    const bucketTime = floorToInterval(reading.timestamp, intervalMinutes).getTime();
+    if (!buckets.has(bucketTime)) {
+      buckets.set(bucketTime, []);
+    }
+    buckets.get(bucketTime)!.push(reading);
+  });
+
+  const aggregated: AggregatedRadiatorReading[] = [];
+
+  buckets.forEach((bucketReadings, bucketTime) => {
+    const temps = bucketReadings.map((r) => r.temperature);
+    const humidities = bucketReadings.map((r) => r.humidity);
+
+    const avgTemperature = temps.reduce((a, b) => a + b, 0) / temps.length;
+    const minTemperature = Math.min(...temps);
+    const maxTemperature = Math.max(...temps);
+    const avgHumidity = humidities.reduce((a, b) => a + b, 0) / humidities.length;
+
+    // Determine status based on temperature thresholds and trends
+    let status: 'on' | 'cooling' | 'off';
+
+    // First, check if it's off based on temperature
+    if (avgTemperature < 70) {
+      status = 'off';
+    } else {
+      // Check if temperature is rising or falling across the bucket
+      const firstTemp = bucketReadings[0].temperature;
+      const lastTemp = bucketReadings[bucketReadings.length - 1].temperature;
+      const tempChange = lastTemp - firstTemp;
+
+      if (tempChange > 0.5) {
+        // Temperature rising - heating
+        status = 'on';
+      } else if (tempChange < -0.5) {
+        // Temperature falling - cooling
+        status = 'cooling';
+      } else {
+        // Temperature stable - use majority vote from individual readings
+        const statusCounts = { on: 0, cooling: 0, off: 0 };
+        bucketReadings.forEach((r) => statusCounts[r.status]++);
+        status = (Object.keys(statusCounts) as Array<'on' | 'cooling' | 'off'>).reduce((a, b) =>
+          statusCounts[a] > statusCounts[b] ? a : b
+        );
+      }
+    }
+
+    aggregated.push({
+      timestamp: new Date(bucketTime),
+      avgTemperature,
+      minTemperature,
+      maxTemperature,
+      avgHumidity,
+      status,
+      totalReadings: bucketReadings.length,
+    });
+  });
+
+  aggregated.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+  return aggregated;
 }

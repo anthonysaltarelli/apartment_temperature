@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { startOfDay, endOfDay, isWithinInterval } from 'date-fns';
-import { TemperatureReading, TimeInterval, ComplianceStats } from '@/lib/types';
-import { loadTemperatureData } from '@/lib/csvParser';
+import { TemperatureReading, TimeInterval, ComplianceStats, RadiatorReading } from '@/lib/types';
+import { loadTemperatureData, loadRadiatorData } from '@/lib/csvParser';
 import { calculateComplianceStats, checkCompliance } from '@/lib/complianceChecker';
-import { aggregateReadings, identifyViolationPeriods, ViolationPeriod } from '@/lib/dataAggregator';
+import { aggregateReadings, aggregateRadiatorReadings, identifyViolationPeriods, ViolationPeriod } from '@/lib/dataAggregator';
 import { fetchOutdoorTemperature, getOutdoorTempForTimestamp } from '@/lib/weatherApi';
 import { TemperatureChart } from '@/components/TemperatureChart';
+import { RadiatorChart } from '@/components/RadiatorChart';
 import { ComplianceStatsComponent } from '@/components/ComplianceStats';
 import { ViolationPeriods } from '@/components/ViolationPeriods';
 import { DateRangeFilter, DateRange } from '@/components/DateRangeFilter';
@@ -17,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 
 export default function Home() {
   const [allReadings, setAllReadings] = useState<TemperatureReading[]>([]);
+  const [allRadiatorReadings, setAllRadiatorReadings] = useState<RadiatorReading[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [interval, setInterval] = useState<TimeInterval>('30min');
@@ -34,6 +36,16 @@ export default function Home() {
           setError('No temperature data available');
           setLoading(false);
           return;
+        }
+
+        // Load radiator temperature data
+        try {
+          const radiatorData = await loadRadiatorData();
+          setAllRadiatorReadings(radiatorData);
+          console.log('Radiator temperature data loaded successfully:', radiatorData.length, 'readings');
+        } catch (radiatorError) {
+          console.warn('Failed to load radiator temperature data:', radiatorError);
+          // Continue without radiator data
         }
 
         // Set initial date range
@@ -102,6 +114,18 @@ export default function Home() {
     );
   }, [allReadings, dateRange]);
 
+  // Filter radiator readings based on selected date range
+  const radiatorReadings = useMemo(() => {
+    if (!dateRange) return allRadiatorReadings;
+
+    return allRadiatorReadings.filter((reading) =>
+      isWithinInterval(reading.timestamp, {
+        start: dateRange.from,
+        end: dateRange.to,
+      })
+    );
+  }, [allRadiatorReadings, dateRange]);
+
   const stats: ComplianceStats = useMemo(() => {
     if (readings.length === 0) {
       return {
@@ -121,6 +145,11 @@ export default function Home() {
     if (readings.length === 0) return [];
     return aggregateReadings(readings, interval);
   }, [readings, interval]);
+
+  const aggregatedRadiatorData = useMemo(() => {
+    if (radiatorReadings.length === 0) return [];
+    return aggregateRadiatorReadings(radiatorReadings, interval);
+  }, [radiatorReadings, interval]);
 
   const violationPeriods: ViolationPeriod[] = useMemo(() => {
     if (readings.length === 0) return [];
@@ -222,6 +251,9 @@ export default function Home() {
                 <CardTitle>Temperature History</CardTitle>
                 <CardDescription>
                   Red highlighted areas indicate non-compliant periods
+                  {aggregatedRadiatorData.length > 0 && (
+                    <> | Color bar at bottom shows radiator status (Red: On, Orange: Cooling, Blue: Off)</>
+                  )}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-4">
@@ -244,10 +276,32 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <div className="h-[500px]">
-              <TemperatureChart data={aggregatedData} interval={interval} tempDisplay={tempDisplay} />
+              <TemperatureChart
+                data={aggregatedData}
+                interval={interval}
+                tempDisplay={tempDisplay}
+                radiatorData={aggregatedRadiatorData}
+              />
             </div>
           </CardContent>
         </Card>
+
+        {/* Radiator Temperature Chart */}
+        {aggregatedRadiatorData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Radiator Temperature History</CardTitle>
+              <CardDescription>
+                Color-coded zones: Red (On/Heating), Orange (Cooling Down), Blue (Off)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[400px]">
+                <RadiatorChart data={aggregatedRadiatorData} interval={interval} />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Violation Periods */}
         <ViolationPeriods periods={violationPeriods} />

@@ -14,17 +14,19 @@ import {
   Area,
   ComposedChart,
   ReferenceArea,
+  Scatter,
 } from 'recharts';
 import { format } from 'date-fns';
-import { AggregatedReading, TimeInterval } from '@/lib/types';
+import { AggregatedReading, TimeInterval, AggregatedRadiatorReading } from '@/lib/types';
 
 interface TemperatureChartProps {
   data: AggregatedReading[];
   interval: TimeInterval;
   tempDisplay: 'indoor' | 'outdoor' | 'both';
+  radiatorData?: AggregatedRadiatorReading[];
 }
 
-export function TemperatureChart({ data, interval, tempDisplay }: TemperatureChartProps) {
+export function TemperatureChart({ data, interval, tempDisplay, radiatorData }: TemperatureChartProps) {
   // Define format function first
   const formatTimestamp = (date: Date, interval: TimeInterval): string => {
     switch (interval) {
@@ -38,19 +40,36 @@ export function TemperatureChart({ data, interval, tempDisplay }: TemperatureCha
     }
   };
 
-  // Prepare chart data with formatted timestamps
+  // Prepare chart data with formatted timestamps and radiator status
   const chartData = useMemo(() => {
-    return data.map((reading) => ({
-      timestamp: reading.timestamp.getTime(),
-      displayTime: formatTimestamp(reading.timestamp, interval),
-      temperature: parseFloat(reading.avgTemperature.toFixed(1)),
-      minTemp: parseFloat(reading.minTemperature.toFixed(1)),
-      maxTemp: parseFloat(reading.maxTemperature.toFixed(1)),
-      outdoorTemp: reading.avgOutdoorTemp !== undefined ? parseFloat(reading.avgOutdoorTemp.toFixed(1)) : undefined,
-      isCompliant: reading.isCompliant,
-      violationCount: reading.violationCount,
-    }));
-  }, [data, interval]);
+    // Create a map of radiator status by timestamp for quick lookup
+    const radiatorStatusMap = new Map<number, 'on' | 'cooling' | 'off'>();
+    if (radiatorData) {
+      radiatorData.forEach((reading) => {
+        radiatorStatusMap.set(reading.timestamp.getTime(), reading.status);
+      });
+    }
+
+    return data.map((reading) => {
+      const radiatorStatus = radiatorStatusMap.get(reading.timestamp.getTime());
+
+      // Map radiator status to Y-axis position (below the main chart)
+      const radiatorY = radiatorStatus === 'on' ? 3 : radiatorStatus === 'cooling' ? 2 : radiatorStatus === 'off' ? 1 : undefined;
+
+      return {
+        timestamp: reading.timestamp.getTime(),
+        displayTime: formatTimestamp(reading.timestamp, interval),
+        temperature: parseFloat(reading.avgTemperature.toFixed(1)),
+        minTemp: parseFloat(reading.minTemperature.toFixed(1)),
+        maxTemp: parseFloat(reading.maxTemperature.toFixed(1)),
+        outdoorTemp: reading.avgOutdoorTemp !== undefined ? parseFloat(reading.avgOutdoorTemp.toFixed(1)) : undefined,
+        isCompliant: reading.isCompliant,
+        violationCount: reading.violationCount,
+        radiatorStatus,
+        radiatorY,
+      };
+    });
+  }, [data, interval, radiatorData]);
 
   // Identify violation zones for highlighting
   const violationZones = useMemo(() => {
@@ -87,6 +106,29 @@ export function TemperatureChart({ data, interval, tempDisplay }: TemperatureCha
     return zones;
   }, [chartData]);
 
+  // Identify radiator status zones for highlighting - create zones for EVERY data point
+  const radiatorZones = useMemo(() => {
+    if (!radiatorData || radiatorData.length === 0) return [];
+
+    const zones: Array<{ start: number; end: number; status: 'on' | 'cooling' | 'off' }> = [];
+
+    radiatorData.forEach((reading, index) => {
+      const start = reading.timestamp.getTime();
+      // End is the next point's timestamp, or extend past the last point
+      const end = index < radiatorData.length - 1
+        ? radiatorData[index + 1].timestamp.getTime()
+        : start + (30 * 60 * 1000); // Extend 30 min past last point
+
+      zones.push({
+        start,
+        end,
+        status: reading.status,
+      });
+    });
+
+    return zones;
+  }, [radiatorData]);
+
   // Calculate Y-axis domain based on displayed temperature data
   const yAxisDomain = useMemo(() => {
     let minTemp = Infinity;
@@ -115,6 +157,18 @@ export function TemperatureChart({ data, interval, tempDisplay }: TemperatureCha
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       const isViolation = !data.isCompliant;
+
+      const radiatorStatusLabel =
+        data.radiatorStatus === 'on' ? 'On/Heating' :
+        data.radiatorStatus === 'cooling' ? 'Cooling Down' :
+        data.radiatorStatus === 'off' ? 'Off' :
+        'N/A';
+
+      const radiatorStatusColor =
+        data.radiatorStatus === 'on' ? 'text-red-600' :
+        data.radiatorStatus === 'cooling' ? 'text-orange-600' :
+        data.radiatorStatus === 'off' ? 'text-blue-600' :
+        'text-muted-foreground';
 
       return (
         <div className="bg-background border border-border rounded-lg shadow-lg p-3">
@@ -158,6 +212,14 @@ export function TemperatureChart({ data, interval, tempDisplay }: TemperatureCha
                 {isViolation ? 'Non-Compliant' : 'Compliant'}
               </span>
             </p>
+            {data.radiatorStatus && (
+              <p className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Radiator:</span>
+                <span className={`font-medium ${radiatorStatusColor}`}>
+                  {radiatorStatusLabel}
+                </span>
+              </p>
+            )}
           </div>
         </div>
       );
@@ -198,6 +260,24 @@ export function TemperatureChart({ data, interval, tempDisplay }: TemperatureCha
             x2={zone.end}
             fill="#ef4444"
             fillOpacity={0.15}
+            strokeOpacity={0}
+          />
+        ))}
+
+        {/* Radiator status zones - subtle highlighting at bottom of chart */}
+        {radiatorZones.map((zone, index) => (
+          <ReferenceArea
+            key={`radiator-${index}`}
+            x1={zone.start}
+            x2={zone.end}
+            y1={yAxisDomain[0]}
+            y2={yAxisDomain[0] + (yAxisDomain[1] - yAxisDomain[0]) * 0.05}
+            fill={
+              zone.status === 'on' ? '#ef4444' :
+              zone.status === 'cooling' ? '#f97316' :
+              '#3b82f6'
+            }
+            fillOpacity={0.5}
             strokeOpacity={0}
           />
         ))}

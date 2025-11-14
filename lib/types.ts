@@ -30,3 +30,20 @@ export interface ComplianceStats {
 }
 
 export type TimeInterval = '1min' | '5min' | '30min' | '1hour';
+
+export interface RadiatorReading {
+  timestamp: Date;
+  temperature: number;
+  humidity: number;
+  status: 'on' | 'cooling' | 'off';
+}
+
+export interface AggregatedRadiatorReading {
+  timestamp: Date;
+  avgTemperature: number;
+  minTemperature: number;
+  maxTemperature: number;
+  avgHumidity: number;
+  status: 'on' | 'cooling' | 'off';
+  totalReadings: number;
+}
